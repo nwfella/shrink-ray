@@ -78,8 +78,8 @@
   .choice:hover { border-color: var(--accent); }
   .choice input { width: 1.6rem; height: 1.6rem; margin: .35rem 0 0; accent-color: var(--accent); }
   .choice.on { border-color: var(--accent); background: #eef4ff; }
-  .choice .t { font-size: 1.3rem; font-weight: 700; }
-  .choice .d { font-size: 1.1rem; color: var(--ink-soft); }
+  .choice .t { display: block; font-size: 1.3rem; font-weight: 700; }
+  .choice .d { display: block; margin-top: .2rem; font-size: 1.1rem; color: var(--ink-soft); }
   .badge {
     display: inline-block; background: var(--good-bg); color: var(--good);
     font-size: .95rem; font-weight: 700; border-radius: 999px;
@@ -424,7 +424,7 @@ const Core = (function () {
 
   const els = {
     dropBox: $('dropBox'), pickBtn: $('pickBtn'), fileInput: $('fileInput'),
-    fileSummary: $('fileSummary'), step2: $('step2'), step3: $('step3'),
+    fileSummary: $('fileSummary'), dropHint: $('dropHint'), step2: $('step2'), step3: $('step3'),
     choices: $('choices'), fmt: $('fmt'), maxEdge: $('maxEdge'), willDo: $('willDo'),
     goBtn: $('goBtn'), progressCard: $('progressCard'), progressText: $('progressText'),
     barFill: $('barFill'), barWrap: $('barWrap'), resultsCard: $('resultsCard'),
@@ -528,6 +528,7 @@ const Core = (function () {
     els.step2.classList.toggle('hidden', !show);
     els.step3.classList.toggle('hidden', !show);
     els.dropBox.classList.toggle('hidden', show);
+    els.dropHint.classList.toggle('hidden', show);   // no longer useful once photos are chosen
     if (!show) els.fileSummary.classList.add('hidden');
   }
 
@@ -725,6 +726,7 @@ const Core = (function () {
     setProgress('Finished.');
     renderResults();
     els.progressCard.classList.add('hidden');
+    els.step3.classList.add('hidden');   // the step is done; a dead grey button only confuses
     els.resultsCard.classList.remove('hidden');
     els.resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }

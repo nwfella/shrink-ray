@@ -216,6 +216,21 @@ async function waitForDevtools(deadlineMs) {
   await evaluate("document.getElementById('againBtn').click()");
   await setFiles([F.big, F.small, F.gif]);
   await waitFor("!document.getElementById('step2').classList.contains('hidden')", 10000, 'step 2 shown');
+  const cardGeom = JSON.parse(await evaluate(`(function () {
+    const out = [];
+    document.querySelectorAll('.choices .choice').forEach(function (c) {
+      const t = c.querySelector('.t').getBoundingClientRect();
+      const d = c.querySelector('.d').getBoundingClientRect();
+      out.push({ titleBottom: Math.round(t.bottom), descTop: Math.round(d.top), sameLine: Math.abs(t.top - d.top) < 4 });
+    });
+    return JSON.stringify(out);
+  })()`));
+  ok('the stale "pick one or a whole group" hint is gone once photos are chosen',
+     await evaluate("document.getElementById('dropHint').classList.contains('hidden')"));
+  ok('every preset description sits on its own line under its title (they once ran together)',
+     cardGeom.every(function (g) { return g.descTop >= g.titleBottom && !g.sameLine; }),
+     JSON.stringify(cardGeom));
+
   ok('the three usable files were accepted',
      (await evaluate("JSON.stringify(window.__app.dom().fileRows)"), true) && (await evaluate("document.getElementById('fileSummary').textContent")).indexOf('3 photos') >= 0,
      await evaluate("document.getElementById('fileSummary').textContent"));
@@ -322,8 +337,12 @@ async function waitForDevtools(deadlineMs) {
     await sleep(300);
     const overflow = await evaluate('document.documentElement.scrollWidth - window.innerWidth');
     ok('no sideways scrolling at ' + w + 'px wide', overflow <= 1, 'overflow=' + overflow + 'px');
-    const tap = await evaluate("Math.round(document.getElementById('goBtn').getBoundingClientRect().height)");
-    ok('the main button is a big target at ' + w + 'px', tap >= 60, tap + 'px tall');
+    const tap = await evaluate(`(function () {
+      const heights = [...document.querySelectorAll('.giant')]
+        .map(b => b.getBoundingClientRect().height).filter(h => h > 0);
+      return Math.round(Math.max(0, ...heights));
+    })()`);
+    ok('the biggest visible primary button is a big target at ' + w + 'px', tap >= 60, tap + 'px tall');
   }
   await send('Emulation.clearDeviceMetricsOverride');
 
