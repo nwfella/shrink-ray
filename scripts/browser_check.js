@@ -329,6 +329,10 @@ async function waitForDevtools(deadlineMs) {
 
   const exceptions = events.filter(function (e) { return e.method === 'Runtime.exceptionThrown'; })
     .map(function (e) { const d = e.params.exceptionDetails; return (d.exception && d.exception.description) || d.text; });
+  /* The page declares its own inline icon, so the browser should never ask for /favicon.ico.
+     Assert that, rather than only filtering the 404 away. */
+  ok('the page declares an inline icon (no resulting /favicon.ico 404)',
+     /<link rel="icon" href="data:/.test(fs.readFileSync(INDEX, 'utf8')));
   const consoleErrors = events.filter(function (e) {
     return e.method === 'Log.entryAdded' && e.params.entry.level === 'error' &&
       !/favicon|net::ERR_FILE_NOT_FOUND/.test(e.params.entry.text);

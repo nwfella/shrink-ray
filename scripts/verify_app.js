@@ -221,6 +221,7 @@ if (typeof zlib.crc32 === 'function') {
   ok('no CDN hostnames', !/(cdn|unpkg|jsdelivr|googleapis|cloudflare)/i.test(html));
   ok('no service worker (cannot run from file://)', !/serviceWorker/.test(html));
   ok('no advertising or analytics', !/(gtag|analytics|tracking|utm_)/i.test(html));
+  ok('tab icon is inline, so it needs no extra request', /<link rel="icon" href="data:/.test(html));
 
   section('Accessibility of the page itself');
   ok('language declared', /<html lang="en"/.test(html));
