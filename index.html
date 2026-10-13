@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shrink Ray — make your photos small enough to email</title>
+<meta name="description" content="Make your photos smaller so they fit in an email. Works in your browser. Your photos never leave your computer.">
+<style>
+  /* ── Big, plain, high-contrast. Built for reading without glasses. ── */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-size: 100%; }
+  :root {
+    --ink: #10203a;
+    --ink-soft: #46566e;
+    --page: #f4f7fb;
+    --card: #ffffff;
+    --line: #c3cedd;
+    --accent: #0b4fd8;
+    --accent-dark: #073ba6;
+    --good: #0f6b3d;
+    --good-bg: #e8f6ee;
+    --warn: #8a4b00;
+    --warn-bg: #fff4e2;
+    --bad: #a01b1b;
+    --bad-bg: #fdecec;
+  }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    font-size: 1.25rem; line-height: 1.55;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 1.5rem 1.1rem 4rem; }
+  h1 { font-size: 2.6rem; line-height: 1.15; margin: 0 0 .4rem; letter-spacing: -.02em; }
+  h2 { font-size: 1.6rem; margin: 0 0 .5rem; }
+  p { margin: 0 0 1rem; }
+  .lede { font-size: 1.35rem; color: var(--ink-soft); margin: 0 0 1.75rem; }
+  .lede strong { color: var(--ink); }
+  .ray { display: inline-block; transform: rotate(-8deg); }
+  .card {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: 16px; padding: 1.4rem; margin-bottom: 1.4rem;
+  }
+  .step {
+    display: inline-block; background: var(--accent); color: #fff;
+    font-weight: 700; font-size: 1.05rem; letter-spacing: .04em;
+    border-radius: 999px; padding: .2rem .85rem; margin-bottom: .7rem;
+  }
+  .hint { color: var(--ink-soft); font-size: 1.15rem; margin: .5rem 0 0; }
+
+  /* ── The one big button that matters ── */
+  .giant {
+    display: block; width: 100%; text-align: center; cursor: pointer;
+    font-family: inherit; font-size: 1.7rem; font-weight: 700; color: #fff;
+    background: var(--accent); border: none; border-radius: 14px;
+    padding: 1.6rem 1.2rem; line-height: 1.3;
+  }
+  .giant small { display: block; font-size: 1.05rem; font-weight: 500; opacity: .95; margin-top: .35rem; }
+  .giant:hover { background: var(--accent-dark); }
+  .giant.go { background: var(--good); font-size: 1.8rem; }
+  .giant.go:hover { background: #0b5230; }
+  .giant[disabled] { background: #9aa7b8; cursor: not-allowed; }
+  #dropBox {
+    border: 3px dashed var(--line); border-radius: 16px; background: #fbfdff;
+    padding: 2rem 1rem; text-align: center; cursor: pointer;
+  }
+  #dropBox.over { border-color: var(--accent); background: #eef4ff; }
+  #dropBox .icon { font-size: 3.2rem; line-height: 1; display: block; margin-bottom: .6rem; }
+  :focus-visible { outline: 4px solid #f0a000; outline-offset: 3px; }
+
+  /* ── Choice cards (presets) ── */
+  .choices { display: grid; gap: .9rem; margin-top: .9rem; }
+  .choice {
+    display: grid; grid-template-columns: auto 1fr; gap: .9rem; align-items: start;
+    border: 2px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem;
+    cursor: pointer; background: #fbfdff;
+  }
+  .choice:hover { border-color: var(--accent); }
+  .choice input { width: 1.6rem; height: 1.6rem; margin: .35rem 0 0; accent-color: var(--accent); }
+  .choice.on { border-color: var(--accent); background: #eef4ff; }
+  .choice .t { font-size: 1.3rem; font-weight: 700; }
+  .choice .d { font-size: 1.1rem; color: var(--ink-soft); }
+  .badge {
+    display: inline-block; background: var(--good-bg); color: var(--good);
+    font-size: .95rem; font-weight: 700; border-radius: 999px;
+    padding: .1rem .6rem; margin-left: .5rem; vertical-align: .12em;
+  }
+
+  details { margin-top: 1rem; }
+  summary { font-size: 1.15rem; cursor: pointer; color: var(--accent); font-weight: 600; }
+  details .inner { padding-top: .8rem; }
+  label.field { display: block; font-size: 1.1rem; font-weight: 600; margin: .8rem 0 .3rem; }
+  select, input[type=number] {
+    font-family: inherit; font-size: 1.15rem; padding: .6rem .7rem;
+    border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+    width: 100%; max-width: 22rem;
+  }
+
+  /* ── Results ── */
+  .result-head { font-size: 2.1rem; font-weight: 800; color: var(--good); line-height: 1.2; margin: 0 0 .3rem; }
+  .result-sub { font-size: 1.3rem; margin: 0 0 1.1rem; }
+  .files { list-style: none; padding: 0; margin: 0 0 1.2rem; }
+  .files li {
+    display: flex; flex-wrap: wrap; gap: .3rem .8rem; align-items: baseline;
+    padding: .7rem 0; border-bottom: 2px solid #edf1f7; font-size: 1.15rem;
+  }
+  .files li:last-child { border-bottom: none; }
+  .files .nm { font-weight: 600; word-break: break-all; }
+  .files .sz { color: var(--ink-soft); }
+  .files .pc { color: var(--good); font-weight: 700; margin-left: auto; }
+  .files .note { flex-basis: 100%; font-size: 1.05rem; color: var(--ink-soft); }
+  .notice { border-radius: 12px; padding: .9rem 1.1rem; margin: 0 0 1rem; font-size: 1.15rem; }
+  .notice.warn { background: var(--warn-bg); color: var(--warn); border: 2px solid #f0cf9a; }
+  .notice.bad { background: var(--bad-bg); color: var(--bad); border: 2px solid #f0b4b4; }
+  .notice.good { background: var(--good-bg); color: var(--good); border: 2px solid #b7e2c8; }
+
+  .bar { height: 1.5rem; background: #e3e9f2; border-radius: 999px; overflow: hidden; margin: .4rem 0 .6rem; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+  .progress-text { font-size: 1.2rem; font-weight: 600; }
+  .save-row { display: grid; gap: .8rem; margin-top: 1.1rem; }
+  .secondary {
+    font-family: inherit; font-size: 1.15rem; font-weight: 600; color: var(--accent);
+    background: #fff; border: 2px solid var(--accent); border-radius: 12px;
+    padding: .9rem 1.1rem; cursor: pointer;
+  }
+  .secondary:hover { background: #eef4ff; }
+  footer { font-size: 1.05rem; color: var(--ink-soft); border-top: 2px solid var(--line); padding-top: 1rem; margin-top: 1rem; }
+  .hidden { display: none !important; }
+  @media (max-width: 560px) {
+    h1 { font-size: 2.1rem; }
+    body { font-size: 1.2rem; }
+    .wrap { padding: 1rem .8rem 3rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="ray">📸</span> Shrink Ray</h1>
+  <p class="lede">Make your photos small enough to email. <strong>Nothing is uploaded</strong> — your photos stay on your own computer.</p>
+
+  <section class="card" aria-labelledby="s1">
+    <span class="step">Step 1</span>
+    <h2 id="s1">Add your photos</h2>
+    <div id="dropBox" role="button" tabindex="0" aria-describedby="dropHint">
+      <span class="icon" aria-hidden="true">🖼️</span>
+      <span class="giant" id="pickBtn">Choose photos<small>or drag them onto this box</small></span>
+    </div>
+    <p class="hint" id="dropHint">You can pick one photo or a whole group of them at the same time.</p>
+    <p class="hint hidden" id="fileSummary"></p>
+    <div id="notices"></div>
+  </section>
+
+  <section class="card hidden" id="step2" aria-labelledby="s2">
+    <span class="step">Step 2</span>
+    <h2 id="s2">How small do you want them?</h2>
+    <div class="choices" id="choices"></div>
+
+    <details>
+      <summary>Other options</summary>
+      <div class="inner">
+        <p class="hint">If you are not sure, leave these alone.</p>
+        <label class="field" for="fmt">File type to save as</label>
+        <select id="fmt">
+          <option value="auto">Automatic (recommended)</option>
+          <option value="image/jpeg">JPEG (.jpg) — opens on anything</option>
+          <option value="image/webp">WebP (.webp) — smallest</option>
+          <option value="image/png">PNG (.png) — largest, keeps see-through parts</option>
+        </select>
+        <label class="field" for="maxEdge">Biggest side, in pixels (1600 is good for email)</label>
+        <input type="number" id="maxEdge" min="200" max="12000" step="50" value="1600">
+      </div>
+    </details>
+  </section>
+
+  <section class="card hidden" id="step3">
+    <span class="step">Step 3</span>
+    <h2>Shrink them</h2>
+    <p class="hint" id="willDo"></p>
+    <button class="giant go" id="goBtn">Shrink my photos</button>
+  </section>
+
+  <section class="card hidden" id="progressCard" aria-live="polite">
+    <p class="progress-text" id="progressText">Getting started…</p>
+    <div class="bar" role="progressbar" aria-labelledby="progressText" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="barWrap"><span id="barFill"></span></div>
+    <p class="hint" id="progressHint">Please leave this page open until it finishes.</p>
+  </section>
+
+  <section class="card hidden" id="resultsCard">
+    <p class="result-head" id="resultHead"></p>
+    <p class="result-sub" id="resultSub"></p>
+    <ul class="files" id="fileList"></ul>
+    <div class="save-row" id="saveRow"></div>
+    <button class="secondary" id="againBtn" type="button">Start over with different photos</button>
+  </section>
+
+  <footer>
+    <p><strong>Shrink Ray</strong> runs entirely inside your web browser. There is no upload, no account, and no internet needed once the page is open. Nothing about your photos is sent anywhere.</p>
+    <p class="hidden" id="offlineNote">Tip: you can bookmark this page, or save it to your computer with <strong>Ctrl + S</strong>, and it will keep working with no internet at all.</p>
+  </footer>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+
+<script>
+/* CORE-START */
+/* Pure logic only: no document, no window, no canvas, no fetch. Tested by scripts/verify_app.js. */
+const Core = (function () {
+
+  const PRESETS = [
+    {
+      id: 'email',
+      title: 'Email friendly',
+      desc: 'About 1600 dots wide. Fits in an email and still looks good on a screen or a print-out. Opens on any phone or computer.',
+      badge: 'Recommended',
+      maxEdge: 1600,
+      format: 'image/jpeg',
+      quality: 0.80
+    },
+    {
+      id: 'tiny',
+      title: 'As small as possible',
+      desc: 'Roughly half the size again. Uses the newer WebP file type, which very old programs (Windows 7 and earlier) may not open.',
+      maxEdge: 1600,
+      format: 'image/webp',
+      quality: 0.72
+    },
+    {
+      id: 'best',
+      title: 'Best quality',
+      desc: 'Keeps the original size of the photo. Still smaller than the original file, but a bigger file than the other two choices.',
+      maxEdge: 0,
+      format: 'image/jpeg',
+      quality: 0.90
+    }
+  ];
+
+  const MIME_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+  function preset(id) {
+    return PRESETS.filter(function (p) { return p.id === id; })[0] || PRESETS[0];
+  }
+
+  /* How big should the saved photo be? maxEdge 0 (or a photo already small enough) means "keep the size". */
+  function targetDims(width, height, maxEdge) {
+    if (!width || !height) return { width: 0, height: 0, resized: false };
+    if (!maxEdge) return { width: width, height: height, resized: false };
+    const longest = Math.max(width, height);
+    if (longest <= maxEdge) return { width: width, height: height, resized: false };
+    const scale = maxEdge / longest;
+    return {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+      resized: true
+    };
+  }
+
+  /* JPEG has no see-through parts, so anything transparent is laid on white instead of black. */
+  function needsWhiteBase(mime) {
+    return mime === 'image/jpeg';
+  }
+
+  function outputMime(override, presetFormat) {
+    return override && override !== 'auto' ? override : presetFormat;
+  }
+
+  function extFor(mime) {
+    return MIME_EXT[mime] || 'jpg';
+  }
+
+  /* photo.png + jpeg -> photo.jpg      (original name kept, ending swapped)
+     my.photo.2024 + jpeg -> my.photo.2024.jpg   (a ".2024" is not an image extension) */
+  const IMAGE_EXTS = ['jpg', 'jpeg', 'jpe', 'jfif', 'png', 'webp', 'gif', 'bmp', 'tif', 'tiff',
+                      'heic', 'heif', 'avif', 'heifs', 'jxl'];
+
+  function swapExt(filename, mime) {
+    const ext = extFor(mime);
+    const name = String(filename || 'photo');
+    const dot = name.lastIndexOf('.');
+    const tail = dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+    if (dot > 0 && IMAGE_EXTS.indexOf(tail) >= 0) return name.slice(0, dot) + '.' + ext;
+    return name + '.' + ext;
+  }
+
+  function formatBytes(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB';
+    return (n / (1024 * 1024)).toFixed(n < 10 * 1024 * 1024 ? 2 : 1) + ' MB';
+  }
+
+  /* Plain-language summary. Deliberately no percentages hidden inside jargon. */
+  function summarize(items) {
+    const usable = items.filter(function (i) { return i && i.ok; });
+    let before = 0, after = 0;
+    usable.forEach(function (i) { before += i.beforeBytes; after += i.afterBytes; });
+    const saved = before - after;
+    const pct = before > 0 ? Math.round((saved / before) * 100) : 0;
+    const n = usable.length;
+    const photos = n === 1 ? 'photo is' : 'photos are';
+    const head = n === 0
+      ? 'Nothing was changed'
+      : ('Your ' + n + ' ' + photos + ' ' + (pct > 0 ? pct + '% smaller' : 'about the same size'));
+    const sub = n === 0
+      ? ''
+      : (formatBytes(before) + ' became ' + formatBytes(after) +
+         (saved > 0 ? (' — that is ' + formatBytes(saved) + ' saved.') : ' — they were already as small as they get.'));
+    return { count: n, beforeBytes: before, afterBytes: after, savedBytes: saved, savedPct: pct, headline: head, sub: sub };
+  }
+
+  /* Enough at once to be quick, never so many that an older computer runs out of memory. */
+  function pickConcurrency(cores, fileCount) {
+    const byCores = Math.max(1, Math.min(4, (Number(cores) || 4) - 1));
+    return Math.max(1, Math.min(byCores, Number(fileCount) || 1));
+  }
+
+  /* ── Recognising what a file really is, by its first bytes ── */
+  function sniff(bytes) {
+    if (!bytes || bytes.length < 12) return 'unknown';
+    const b = bytes;
+    const str = function (at, len) {
+      let s = '';
+      for (let i = at; i < at + len && i < b.length; i++) s += String.fromCharCode(b[i]);
+      return s;
+    };
+    if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return 'jpeg';
+    if (b[0] === 0x89 && str(1, 3) === 'PNG') return 'png';
+    if (str(0, 3) === 'GIF') return 'gif';
+    if (str(0, 2) === 'BM') return 'bmp';
+    if ((b[0] === 0x49 && b[1] === 0x49) || (b[0] === 0x4D && b[1] === 0x4D)) return 'tiff';
+    if (str(0, 4) === 'RIFF' && str(8, 4) === 'WEBP') return 'webp';
+    if (str(4, 4) === 'ftyp') {
+      const brand = str(8, 4);
+      if (brand === 'heic' || brand === 'heix' || brand === 'heim' || brand === 'heis' ||
+          brand === 'hevc' || brand === 'hevx' || brand === 'mif1' || brand === 'msf1' ||
+          brand === 'avif' || brand === 'avis') return brand.indexOf('av') === 0 ? 'avif' : 'heic';
+    }
+    return 'unknown';
+  }
+
+  function looksLikePhoto(bytes, name) {
+    const kind = sniff(bytes);
+    return ['jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'heic', 'avif'].indexOf(kind) >= 0;
+  }
+
+  /* ── Making one .zip out of many saved photos, with no helper library ── */
+  const CRC_TABLE = (function () {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function le16(v) { return [v & 0xFF, (v >>> 8) & 0xFF]; }
+  function le32(v) { return [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF]; }
+
+  /* Photos are already compressed, so storing them (method 0) loses nothing and is far faster
+     than running deflate over data that cannot be squeezed. */
+  async function buildZip(entries) {
+    const parts = [];
+    const central = [];
+    let offset = 0;
+    for (let i = 0; i < entries.length; i++) {
+      const nameBytes = new TextEncoder().encode(entries[i].name);
+      const data = entries[i].data;
+      const crc = crc32(data);
+      const method = 0;
+      const head = []
+        .concat(le32(0x04034b50), le16(20), le16(0), le16(method),
+                le16(0), le16(0), le32(crc), le32(data.length), le32(data.length),
+                le16(nameBytes.length), le16(0));
+      parts.push(new Uint8Array(head), nameBytes, data);
+      const c = []
+        .concat(le32(0x02014b50), le16(20), le16(20), le16(0), le16(method),
+                le16(0), le16(0), le32(crc), le32(data.length), le32(data.length),
+                le16(nameBytes.length), le16(0), le16(0), le16(0), le16(0),
+                le32(0), le32(offset));
+      const cent = new Uint8Array(c.length + nameBytes.length);
+      cent.set(new Uint8Array(c), 0);
+      cent.set(nameBytes, c.length);
+      central.push(cent);
+      offset += head.length + nameBytes.length + data.length;
+    }
+    const centralSize = central.reduce(function (a, b) { return a + b.length; }, 0);
+    const end = new Uint8Array([]
+      .concat(le32(0x06054b50), le16(0), le16(0), le16(entries.length), le16(entries.length),
+              le32(centralSize), le32(offset), le16(0)));
+    const all = parts.concat(central, [end]);
+    const total = all.reduce(function (a, b) { return a + b.length; }, 0);
+    const out = new Uint8Array(total);
+    let p = 0;
+    for (let i = 0; i < all.length; i++) { out.set(all[i], p); p += all[i].length; }
+    return out;
+  }
+
+  function zipName(date) {
+    const d = date || new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return 'smaller-photos-' + d.getFullYear() + '-' + m + '-' + day + '.zip';
+  }
+
+  return {
+    PRESETS: PRESETS, preset: preset, targetDims: targetDims, outputMime: outputMime,
+    needsWhiteBase: needsWhiteBase, extFor: extFor, swapExt: swapExt, formatBytes: formatBytes,
+    summarize: summarize, pickConcurrency: pickConcurrency, sniff: sniff,
+    looksLikePhoto: looksLikePhoto, crc32: crc32, buildZip: buildZip, zipName: zipName
+  };
+})();
+/* CORE-END */
+
+(function () {
+  'use strict';
+  const $ = function (id) { return document.getElementById(id); };
+  const MAX_BYTES_TO_SNIFF = 64;
+
+  const els = {
+    dropBox: $('dropBox'), pickBtn: $('pickBtn'), fileInput: $('fileInput'),
+    fileSummary: $('fileSummary'), step2: $('step2'), step3: $('step3'),
+    choices: $('choices'), fmt: $('fmt'), maxEdge: $('maxEdge'), willDo: $('willDo'),
+    goBtn: $('goBtn'), progressCard: $('progressCard'), progressText: $('progressText'),
+    barFill: $('barFill'), barWrap: $('barWrap'), resultsCard: $('resultsCard'),
+    resultHead: $('resultHead'), resultSub: $('resultSub'), notices: $('notices'),
+    fileList: $('fileList'), saveRow: $('saveRow'), againBtn: $('againBtn'),
+    offlineNote: $('offlineNote')
+  };
+
+  const state = {
+    files: [],         // [{ file, kind }]
+    presetId: 'email',
+    results: [],
+    running: false,
+    done: false,
+    overriddenEdge: null
+  };
+
+  /* ── Step 1: choosing photos ── */
+  els.pickBtn.addEventListener('click', function (e) { e.stopPropagation(); els.fileInput.click(); });
+  els.dropBox.addEventListener('click', function () { els.fileInput.click(); });
+  els.dropBox.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); els.fileInput.click(); }
+  });
+  els.fileInput.addEventListener('change', function (e) { accept(e.target.files); });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    els.dropBox.addEventListener(ev, function (e) { e.preventDefault(); els.dropBox.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    els.dropBox.addEventListener(ev, function (e) { e.preventDefault(); els.dropBox.classList.remove('over'); });
+  });
+  els.dropBox.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) accept(e.dataTransfer.files);
+  });
+  document.addEventListener('dragover', function (e) { e.preventDefault(); });
+  document.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  async function accept(fileList) {
+    if (state.running) return;
+    const incoming = Array.prototype.slice.call(fileList || []);
+    if (!incoming.length) return;
+
+    const chosen = [];
+    const rejects = [];
+    const heic = [];
+    for (const file of incoming) {
+      const head = new Uint8Array(await file.slice(0, MAX_BYTES_TO_SNIFF).arrayBuffer());
+      const kind = Core.sniff(head);
+      if (kind === 'heic' || kind === 'avif') {
+        heic.push(file.name);
+        continue;
+      }
+      if (!Core.looksLikePhoto(head, file.name)) {
+        rejects.push(file.name + ' (not a photo)');
+        continue;
+      }
+      chosen.push({ file: file, kind: kind, error: null });
+    }
+
+    state.files = chosen;
+    state.results = [];
+    state.done = false;
+    renderNotices({ heic: heic, rejects: rejects });
+    if (!chosen.length) { showStep2(false); return; }
+    renderFileSummary(chosen);
+    showStep2(true);
+    updateWillDo();
+  }
+
+  function renderFileSummary(chosen) {
+    els.fileSummary.classList.remove('hidden');
+    els.fileSummary.textContent = chosen.length === 1
+      ? 'Ready: ' + chosen[0].file.name + ' (' + Core.formatBytes(chosen[0].file.size) + ')'
+      : 'Ready: ' + chosen.length + ' photos, ' +
+        Core.formatBytes(chosen.reduce(function (a, c) { return a + c.file.size; }, 0)) + ' altogether.';
+  }
+
+  function renderNotices(info) {
+    els.notices.innerHTML = '';
+    const add = function (cls, html) {
+      const d = document.createElement('div');
+      d.className = 'notice ' + cls;
+      d.innerHTML = html;
+      els.notices.appendChild(d);
+    };
+    if (info.heic && info.heic.length) {
+      add('warn', '<strong>' + info.heic.length + ' iPhone photo' + (info.heic.length === 1 ? '' : 's') +
+        ' could not be opened.</strong> These are in Apple\u2019s HEIC format, which Windows browsers cannot read. ' +
+        'Fix: on the iPhone, open <em>Settings \u2192 Camera \u2192 Formats</em> and choose <em>Most Compatible</em>, ' +
+        'or send the photo to yourself by email (that converts it automatically). ' +
+        'If you are picking photos on an iPhone or iPad right in this page, they arrive already converted and will work.');
+    }
+    if (info.rejects && info.rejects.length) {
+      add('warn', 'Skipped ' + info.rejects.length + ' file' + (info.rejects.length === 1 ? '' : 's') +
+        ' that ' + (info.rejects.length === 1 ? 'is not' : 'are not') + ' a photo: ' +
+        info.rejects.slice(0, 4).join(', ') + (info.rejects.length > 4 ? '\u2026' : ''));
+    }
+  }
+
+  function showStep2(show) {
+    els.step2.classList.toggle('hidden', !show);
+    els.step3.classList.toggle('hidden', !show);
+    els.dropBox.classList.toggle('hidden', show);
+    if (!show) els.fileSummary.classList.add('hidden');
+  }
+
+  /* ── Step 2: the choices ── */
+  function renderChoices() {
+    els.choices.innerHTML = '';
+    Core.PRESETS.forEach(function (p) {
+      const label = document.createElement('label');
+      label.className = 'choice' + (p.id === state.presetId ? ' on' : '');
+      label.innerHTML =
+        '<input type="radio" name="preset" value="' + p.id + '"' + (p.id === state.presetId ? ' checked' : '') + '>' +
+        '<span><span class="t">' + p.title + (p.badge ? '<span class="badge">' + p.badge + '</span>' : '') + '</span>' +
+        '<span class="d">' + p.desc + '</span></span>';
+      label.querySelector('input').addEventListener('change', function () {
+        state.presetId = p.id;
+        state.overriddenEdge = null;
+        els.maxEdge.value = p.maxEdge || '';
+        Array.prototype.forEach.call(els.choices.children, function (c) { c.classList.remove('on'); });
+        label.classList.add('on');
+        updateWillDo();
+      });
+      els.choices.appendChild(label);
+    });
+  }
+
+  els.maxEdge.addEventListener('change', function () {
+    const v = parseInt(els.maxEdge.value, 10);
+    state.overriddenEdge = (v && v >= 200) ? v : null;
+    updateWillDo();
+  });
+  els.fmt.addEventListener('change', updateWillDo);
+
+  function activeSettings() {
+    const p = Core.preset(state.presetId);
+    const override = els.fmt.value;
+    const mime = Core.outputMime(override, p.format);
+    const maxEdge = state.overriddenEdge !== null ? state.overriddenEdge : p.maxEdge;
+    return { preset: p, mime: mime, maxEdge: maxEdge, quality: p.quality, override: override };
+  }
+
+  function updateWillDo() {
+    if (!state.files.length) return;
+    const s = activeSettings();
+    const words = s.maxEdge ? ('about ' + s.maxEdge + ' dots on the longest side') : 'at their original size';
+    els.willDo.textContent = state.files.length + (state.files.length === 1 ? ' photo' : ' photos') +
+      ' will be saved ' + words + ', as ' + Core.extFor(s.mime).toUpperCase() + ' files.';
+    els.goBtn.disabled = false;
+  }
+
+  /* ── Step 3: the work ── */
+  els.goBtn.addEventListener('click', run);
+
+  async function decodePhoto(file) {
+    try {
+      return await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (e) {
+      return await new Promise(function (resolve, reject) {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('cannot-open')); };
+        img.src = url;
+      });
+    }
+  }
+
+  /* Halving in steps gives a much cleaner result than one big jump on large photos. */
+  function halveTo(source, dims) {
+    let cur = source, w = source.width, h = source.height;
+    while (w / 2 >= dims.width && h / 2 >= dims.height && (w / 2) >= 16 && (h / 2) >= 16) {
+      const nw = Math.max(1, Math.round(w / 2)), nh = Math.max(1, Math.round(h / 2));
+      const step = document.createElement('canvas');
+      step.width = nw; step.height = nh;
+      const sc = step.getContext('2d');
+      sc.imageSmoothingEnabled = true; sc.imageSmoothingQuality = 'high';
+      sc.drawImage(cur, 0, 0, nw, nh);
+      cur = step; w = nw; h = nh;
+    }
+    return cur;
+  }
+
+  async function encode(source, dims, settings) {
+    const canvas = document.createElement('canvas');
+    canvas.width = dims.width; canvas.height = dims.height;
+    const ctx = canvas.getContext('2d');
+    if (Core.needsWhiteBase(settings.mime)) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, dims.width, dims.height);
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, 0, 0, dims.width, dims.height);
+    const blob = await new Promise(function (resolve) {
+      canvas.toBlob(function (b) { resolve(b); }, settings.mime, settings.quality);
+    });
+    canvas.width = canvas.height = 0;
+    if (!blob) throw new Error('could-not-save');
+    return blob;
+  }
+
+  async function processOne(item, settings) {
+    const original = item.file;
+    const out = {
+      name: Core.swapExt(original.name, settings.mime),
+      originalName: original.name,
+      beforeBytes: original.size,
+      afterBytes: original.size,
+      blob: original,
+      ok: true,
+      note: '',
+      changed: false
+    };
+    try {
+      const source = await decodePhoto(original);
+      const realW = source.width || source.naturalWidth;
+      const realH = source.height || source.naturalHeight;
+      const dims = Core.targetDims(realW, realH, settings.maxEdge);
+      const work = dims.resized ? halveTo(source, dims) : source;
+      const blob = await encode(work, dims, settings);
+      if (typeof source.close === 'function') source.close();
+
+      /* Never hand back something bigger than what came in. */
+      if (blob.size >= original.size && !dims.resized) {
+        out.blob = original;
+        out.afterBytes = original.size;
+        out.changed = false;
+        out.note = 'Already as small as it gets \u2014 left untouched.';
+        return out;
+      }
+
+      /* If a browser quietly hands back a different file type, say so instead of lying. */
+      const gotType = blob.type || settings.mime;
+      if (gotType !== settings.mime) {
+        out.note = 'Saved as ' + Core.extFor(gotType).toUpperCase() + ' (this browser does not make ' +
+          Core.extFor(settings.mime).toUpperCase() + ' files).';
+        out.name = Core.swapExt(original.name, gotType);
+      }
+      out.blob = blob;
+      out.afterBytes = blob.size;
+      out.changed = true;
+      if (item.kind === 'gif') {
+        out.note = (out.note ? out.note + ' ' : '') + 'Animated GIFs become a single still picture.';
+      }
+      if (dims.resized) {
+        out.note = (out.note ? out.note + ' ' : '') + realW + '\u00d7' + realH + ' \u2192 ' + dims.width + '\u00d7' + dims.height + '.';
+      }
+      return out;
+    } catch (e) {
+      out.ok = false;
+      out.changed = false;
+      out.afterBytes = original.size;
+      out.note = 'Could not be opened \u2014 left untouched.';
+      return out;
+    }
+  }
+
+  async function run() {
+    if (state.running || !state.files.length) return;
+    state.running = true;
+    state.done = false;
+    state.results = [];
+    els.goBtn.disabled = true;
+    els.resultsCard.classList.add('hidden');
+    els.progressCard.classList.remove('hidden');
+
+    const settings = activeSettings();
+    const items = state.files.slice();
+    const total = items.length;
+    const done = new Array(total);
+    let finished = 0;
+
+    const setProgress = function (label) {
+      const pct = Math.round((finished / total) * 100);
+      els.barFill.style.width = pct + '%';
+      els.barWrap.setAttribute('aria-valuenow', String(pct));
+      els.progressText.textContent = label;
+    };
+    setProgress(total === 1 ? 'Shrinking your photo\u2026' : 'Shrinking photo 1 of ' + total + '\u2026');
+
+    const workers = Core.pickConcurrency(navigator.hardwareConcurrency, total);
+    let next = 0;
+    await Promise.all(new Array(workers).fill(0).map(async function () {
+      while (true) {
+        const i = next++;
+        if (i >= total) return;
+        done[i] = await processOne(items[i], settings);
+        finished++;
+        if (finished < total) setProgress('Shrinking photo ' + (finished + 1) + ' of ' + total + '\u2026');
+      }
+    }));
+
+    state.results = done.filter(Boolean);
+    state.running = false;
+    state.done = true;
+    setProgress('Finished.');
+    renderResults();
+    els.progressCard.classList.add('hidden');
+    els.resultsCard.classList.remove('hidden');
+    els.resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ── Results ── */
+  function renderResults() {
+    const s = Core.summarize(state.results);
+    const failed = state.results.filter(function (r) { return !r.ok; }).length;
+    els.resultHead.textContent = failed === state.results.length && state.results.length
+      ? 'Those photos could not be opened'
+      : s.headline;
+    els.resultSub.textContent = s.sub;
+    els.fileList.innerHTML = '';
+
+    const anyChanged = state.results.some(function (r) { return r.changed; });
+
+    state.results.forEach(function (r) {
+      const li = document.createElement('li');
+      const pct = r.ok && r.beforeBytes > 0
+        ? Math.round((1 - (r.afterBytes / r.beforeBytes)) * 100)
+        : 0;
+      const sz = Core.formatBytes(r.beforeBytes) + (r.changed ? ' \u2192 ' + Core.formatBytes(r.afterBytes) : '');
+      li.innerHTML =
+        '<span class="nm"></span><span class="sz">' + sz + '</span>' +
+        '<span class="pc">' + (r.changed ? (pct > 0 ? pct + '% smaller' : 'no change') : 'unchanged') + '</span>' +
+        (r.note ? '<span class="note">' + r.note + '</span>' : '');
+      li.querySelector('.nm').textContent = r.name;
+      els.fileList.appendChild(li);
+    });
+
+    els.saveRow.innerHTML = '';
+    if (anyChanged) {
+      const multiple = state.results.filter(function (r) { return r.changed; }).length > 1;
+      const main = document.createElement('button');
+      main.className = 'giant go';
+      main.type = 'button';
+      main.textContent = multiple ? 'Save all my photos' : 'Save my photo';
+      main.addEventListener('click', function () { saveAll(main); });
+      els.saveRow.appendChild(main);
+      const hint = document.createElement('p');
+      hint.className = 'hint';
+      hint.textContent = multiple
+        ? 'You will be asked to choose a folder, and all of the small photos go into it. If you would rather have one single file, use the button below.'
+        : 'You will be asked where to save it. The original file name is kept \u2014 only the ending changes.';
+      els.saveRow.appendChild(hint);
+      if (multiple) {
+        const zipBtn = document.createElement('button');
+        zipBtn.className = 'secondary';
+        zipBtn.type = 'button';
+        zipBtn.textContent = 'Save as one single .zip file instead';
+        zipBtn.addEventListener('click', function () { saveZip(zipBtn); });
+        els.saveRow.appendChild(zipBtn);
+      }
+    } else {
+      const p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = 'Nothing needed changing, so there is nothing new to save. Your original photos are untouched.';
+      els.saveRow.appendChild(p);
+    }
+  }
+
+  async function saveAll(btn) {
+    const changed = state.results.filter(function (r) { return r.changed; });
+    btn.disabled = true;
+    const old = btn.textContent;
+    try {
+      if (changed.length === 1) {
+        await saveOne(changed[0]);
+      } else if (window.showDirectoryPicker) {
+        btn.textContent = 'Choose a folder\u2026';
+        const dir = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'pictures' });
+        let n = 0;
+        for (const r of changed) {
+          btn.textContent = 'Saving ' + (++n) + ' of ' + changed.length + '\u2026';
+          const handle = await dir.getFileHandle(r.name, { create: true });
+          const w = await handle.createWritable();
+          await w.write(r.blob);
+          await w.close();
+        }
+        btn.textContent = 'Saved!';
+      } else {
+        await saveZip(btn);
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') btn.textContent = old;
+      else { btn.textContent = 'Saving the usual way\u2026'; await downloadViaLink(changed[changed.length - 1] || changed[0]); }
+    } finally {
+      setTimeout(function () { btn.disabled = false; if (btn.textContent === 'Saved!' || btn.textContent === 'Saving the usual way\u2026') btn.textContent = old; }, 2500);
+    }
+  }
+
+  async function saveOne(r) {
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: r.name,
+          types: [{ description: 'Smaller photo', accept: { 'image/*': ['.' + Core.extFor(r.blob.type || 'image/jpeg')] } }]
+        });
+        const w = await handle.createWritable();
+        await w.write(r.blob);
+        await w.close();
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+    await downloadViaLink(r);
+  }
+
+  async function saveZip(btn) {
+    const changed = state.results.filter(function (r) { return r.changed; });
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = 'Putting them in one file\u2026';
+    try {
+      const entries = [];
+      for (const r of changed) {
+        entries.push({ name: r.name, data: new Uint8Array(await r.blob.arrayBuffer()) });
+      }
+      const bytes = await Core.buildZip(entries);
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const name = Core.zipName(new Date());
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: name,
+            types: [{ description: 'Zip file of photos', accept: { 'application/zip': ['.zip'] } }]
+          });
+          const w = await handle.createWritable();
+          await w.write(blob);
+          await w.close();
+          btn.textContent = 'Saved!';
+          setTimeout(function () { btn.textContent = old; btn.disabled = false; }, 2500);
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') { btn.textContent = old; btn.disabled = false; return; }
+        }
+      }
+      await downloadViaLink({ blob: blob, name: name });
+      btn.textContent = 'Saved to your Downloads folder';
+      setTimeout(function () { btn.textContent = old; btn.disabled = false; }, 2500);
+    } catch (e) {
+      btn.textContent = 'Sorry \u2014 saving failed';
+      setTimeout(function () { btn.textContent = old; btn.disabled = false; }, 3000);
+    }
+  }
+
+  async function downloadViaLink(r) {
+    const url = URL.createObjectURL(r.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = r.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+  }
+
+  els.againBtn.addEventListener('click', function () {
+    state.files = []; state.results = []; state.done = false; state.overriddenEdge = null;
+    els.fileInput.value = '';
+    els.resultsCard.classList.add('hidden');
+    els.notices.innerHTML = '';
+    els.fileSummary.classList.add('hidden');
+    els.fileList.innerHTML = '';
+    els.saveRow.innerHTML = '';
+    els.fileSummary.classList.add('hidden');
+    els.maxEdge.value = Core.preset(state.presetId).maxEdge || '';
+    showStep2(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  /* ── Boot ── */
+  renderChoices();
+  els.maxEdge.value = Core.preset(state.presetId).maxEdge;
+  els.offlineNote.classList.remove('hidden');
+
+  /* Test hook: the browser gate drives the real pipeline through this. */
+  window.__app = {
+    Core: Core,
+    state: state,
+    accept: accept,
+    run: run,
+    dom: function () {
+      return {
+        step2Visible: !els.step2.classList.contains('hidden'),
+        progressText: els.progressText.textContent,
+        headline: els.resultHead.textContent,
+        sub: els.resultSub.textContent,
+        fileRows: Array.prototype.map.call(els.fileList.children, function (li) { return li.textContent; }),
+        notices: Array.prototype.map.call(els.notices.children, function (d) { return d.textContent; }),
+        saveButtons: Array.prototype.map.call(els.saveRow.querySelectorAll('button'), function (b) { return b.textContent; })
+      };
+    },
+    results: function () {
+      return state.results.map(function (r) {
+        return { name: r.name, beforeBytes: r.beforeBytes, afterBytes: r.afterBytes, ok: r.ok, changed: r.changed, type: (r.blob && r.blob.type) || '', note: r.note };
+      });
+    },
+    setPreset: function (id) {
+      state.presetId = id;
+      renderChoices();
+      els.maxEdge.value = Core.preset(id).maxEdge;
+      els.maxEdge.dispatchEvent(new Event('change'));
+    },
+    setOverride: function (format) { els.fmt.value = format; els.fmt.dispatchEvent(new Event('change')); },
+    setMaxEdge: function (px) { els.maxEdge.value = px; els.maxEdge.dispatchEvent(new Event('change')); },
+    zipBase64: async function () {
+      const changed = state.results.filter(function (r) { return r.changed; });
+      const entries = [];
+      for (const r of changed) entries.push({ name: r.name, data: new Uint8Array(await r.blob.arrayBuffer()) });
+      const bytes = await Core.buildZip(entries);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 8192) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      }
+      return btoa(bin);
+    }
+  };
+})();
+</script>
+</body>
+</html>

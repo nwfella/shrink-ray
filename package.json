@@ -1,0 +1,13 @@
+{
+  "name": "shrink-ray",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Make your photos small enough to email. One self-contained HTML file, no uploads, works offline.",
+  "license": "MIT",
+  "scripts": {
+    "verify": "node scripts/verify_app.js",
+    "verify:browser": "node scripts/browser_check.js",
+    "verify:all": "npm run verify && npm run verify:browser",
+    "verify:live": "node scripts/browser_check.js --url=https://nwfella.github.io/shrink-ray/"
+  }
+}
